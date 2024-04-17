@@ -68,13 +68,13 @@ fn parse_request(request: &str) -> RequestOrError {
     }
 }
 
-fn process_task(task: RequestOrError, mapId: &mut i32) -> Result<String, String> {
+fn process_task(task: RequestOrError, other_map_id: &mut i32) -> Result<String, String> {
     match task {
         RequestOrError::GetRequest { key } => {
             let key_c = Vec::from(key);
             let mut buffer = vec![0; 1 << 20];
             let res = unsafe {
-                get_val(*mapId as i32, 
+                get_val(*other_map_id as i32, 
                         key_c.as_ptr() as *const u8, 
                         key_c.len() as i32, 
                         buffer.as_mut_ptr() as *mut u8)
@@ -91,7 +91,7 @@ fn process_task(task: RequestOrError, mapId: &mut i32) -> Result<String, String>
             let value_c = Vec::from(value.clone());
             let res = unsafe {
                 set_val(
-                    *mapId as i32,
+                    *other_map_id as i32,
                     key_c.as_ptr() as *const u8,
                     key.len() as i32,
                     value_c.as_ptr() as *const u8,
@@ -118,14 +118,14 @@ fn process_task(task: RequestOrError, mapId: &mut i32) -> Result<String, String>
         }
         RequestOrError::HandshakeRequest { map_id } => {
             if let Some(map_id) = map_id {
-                *mapId = map_id;
+                *other_map_id = map_id;
                 Ok(map_id.to_string())
             } else {
                 let res = unsafe { init_map() };
                 if res == -1 {
                     Err("Error initializing map".to_string())
                 } else {
-                    *mapId = res;
+                    *other_map_id = res;
                     Ok(res.to_string())
                 }
             }
@@ -135,7 +135,7 @@ fn process_task(task: RequestOrError, mapId: &mut i32) -> Result<String, String>
 }
 
 fn handle_client(stream: &mut TcpStream) {
-    let mut mapId = -1;
+    let mut map_id = -1;
     let mut buffer = [0; 1 << 20];
     loop {
         match stream.read(&mut buffer) {
@@ -147,7 +147,7 @@ fn handle_client(stream: &mut TcpStream) {
                 // println!("Received request: {}", request);
                 let task = parse_request(&request);
                 // println!("Parsed request: {:?}", task);
-                let response = process_task(task, &mut mapId);
+                let response = process_task(task, &mut map_id);
                 // println!("Response: {:?}", response);
                 match response {
                     Ok(response) => {

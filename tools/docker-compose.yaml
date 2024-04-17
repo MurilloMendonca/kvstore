@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  kvserver-c-cpp:
+    build: 
+      context: ./../
+      dockerfile: tools/Dockerfile
+    image: kvserver-c-cpp
+    ports:
+      - "8080:8080"
+    mem_limit: 512m
+    cpus: 2
+
+  kvserver-java:
+    build:
+      context: ./../
+      dockerfile: tools/Dockerfile-java
+    image: kvserver-java
+    ports:
+      - "8081:8080"
+    mem_limit: 512m
+    cpus: 2
+
+  kvserver-c-rust:
+    build:
+      context: ./../
+      dockerfile: tools/Dockerfile-rust
+    image: kvserver-c-rust
+    ports:
+      - "8082:8080"
+    mem_limit: 512m
+    cpus: 2

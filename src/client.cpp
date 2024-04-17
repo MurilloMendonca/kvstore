@@ -21,7 +21,7 @@ KVClient::KVClient(const char *ip, int port, int map_id) {
     return;
   }
 
-  std::string handshake = "h:" + std::to_string(map_id);
+  std::string handshake = "h:" + std::to_string(map_id) + ":";
   int len = ::send(sock, handshake.c_str(), handshake.size(), 0);
   if (len == -1) {
     _sock = Error("Failed to send handshake");
@@ -67,7 +67,7 @@ KVClient::KVClient(const char *ip, int port) {
     return;
   }
 
-  int len = ::send(sock, "h:n", 3, 0);
+  int len = ::send(sock, "h:n:", 4, 0);
   if (len == -1) {
     _sock = Error("Failed to send handshake");
     return;

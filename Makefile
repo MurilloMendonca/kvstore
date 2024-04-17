@@ -1,53 +1,52 @@
-# C flags
-FLAGS_DB = -Wall -g -O0 -pedantic -Wextra -Werror -fsanitize=address -fsanitize=undefined -mshstk -DDEBUG
-FLAGS_RL = -O3
-FLAGS = $(FLAGS_RL)
-ifeq ($(DEBUG), 1)
-	FLAGS = $(FLAGS_DB)
-endif
-CFLAGS = $(FLAGS) -std=c99
-CCFLAGS = $(FLAGS) -std=c++17
-
-all: libmapper.so libmapper.a server libkvclient.so libkvclient.a clientTest mapperTest
-
-zig:
-	zig build-lib -dynamic mapper.zig  -OReleaseFast -lc
-rust:
-	rustc server.rs -L. -l dylib=mapper -o server -C link-arg=-Wl,-rpath,.
+all: buildDir dynamicLibs staticLibs executables
+buildDir:
+	mkdir -p build
+dynamicLibs: build/libmapper.so build/libmapperjni.so 
+staticLibs: build/libmapper.a build/libkvclient.a 
+executables: build/server build/rust-server build/mapperTest build/clientTest build/benchmark build/Main.jar 
+build/libmapper.so : src/mapper.c
+	cc -fPIC -O3 -Iinclude/ -c src/mapper.c -o src/mapper.c.o
+	cc -fPIC -O3 -Iinclude/ -shared src/mapper.c.o -o build/libmapper.so
+build/libmapperjni.so : src/mapper.c src/jni_wrapper.c
+	gcc -fPIC -O3 -Iinclude/ -I/usr/lib/jvm/java-17-openjdk/include -I/usr/lib/jvm/java-17-openjdk/include/linux -c src/mapper.c -o src/mapper.c.o
+	gcc -fPIC -O3 -Iinclude/ -I/usr/lib/jvm/java-17-openjdk/include -I/usr/lib/jvm/java-17-openjdk/include/linux -c src/jni_wrapper.c -o src/jni_wrapper.c.o
+	gcc -fPIC -O3 -Iinclude/ -I/usr/lib/jvm/java-17-openjdk/include -I/usr/lib/jvm/java-17-openjdk/include/linux -shared src/mapper.c.o src/jni_wrapper.c.o -o build/libmapperjni.so
+build/libmapper.a : src/mapper.c
+	cc -fPIC -O3 -Iinclude/ -c src/mapper.c -o src/mapper.c.o -static
+	ar rcs build/libmapper.a src/mapper.c.o
+build/libkvclient.a : src/client.cpp
+	g++ -std=c++17 -Iinclude/ -c src/client.cpp -o src/client.cpp.o -static
+	ar rcs build/libkvclient.a src/client.cpp.o
+build/server: src/server.cpp staticLibs
+	g++ -std=c++17 -g -Iinclude/ -c src/server.cpp -o src/server.cpp.o -static
+	g++ -std=c++17 -g -Iinclude/ src/server.cpp.o -o build/server -Lbuild -lmapper -static
+build/rust-server: src/server.rs dynamicLibs
+	rustc -C target-feature=+crt-static src/server.rs -o build/rust-server -L build/ -l static=mapper
+build/mapperTest: src/mapper.c staticLibs
+	cc -DTEST -Iinclude/ -c src/mapper.c -o src/mapper.c.o -static
+	cc -DTEST -Iinclude/ src/mapper.c.o -o build/mapperTest -static
+build/clientTest: src/client.cpp staticLibs
+	g++ -std=c++17 -DTEST -Iinclude/ -c src/client.cpp -o src/client.cpp.o -static
+	g++ -std=c++17 -DTEST -Iinclude/ src/client.cpp.o -o build/clientTest -static
+build/benchmark: src/client.cpp staticLibs
+	g++ -std=c++17 -DTEST -DBENCHMARK -Iinclude/ -c src/client.cpp -o src/client.cpp.o -static
+	g++ -std=c++17 -DTEST -DBENCHMARK -Iinclude/ src/client.cpp.o -o build/benchmark -static
+build/Main.jar: src/MapperWrapper.java src/Main.java dynamicLibs
+	javac -d ./build/classes src/MapperWrapper.java src/Main.java
+	cp -r META-INF/ build/
+	cp build/libmapperjni.so build/classes/
+	jar cfm build/Main.jar build/META-INF/MANIFEST.MF -C build/classes .
 clean:
-	rm -rf *.so *.a *.o server mapperTest clientTest benchmark 
-
-libmapper.so: mapper.o
-	cc -shared -o libmapper.so mapper.o
-
-libmapper.a: mapper.o
-	ar rcs libmapper.a mapper.o
-
-mapper.o: mapper.c
-	cc -c mapper.c -fPIC -o mapper.o $(CFLAGS)
-
-server: server.cpp libmapper.a
-	g++  server.cpp -o server -L. -l:libmapper.so $(CCFLAGS) -Wl,-rpath,.
-
-kvclient.o: client.cpp
-	g++ -c client.cpp -fPIC -o kvclient.o $(CCFLAGS)
-
-libkvclient.so: kvclient.o
-	g++ -shared -o libkvclient.so kvclient.o
-
-libkvclient.a: kvclient.o
-	ar rcs libkvclient.a kvclient.o
-
-mapperTest: mapper.c 
-	cc  -DTEST mapper.c -o mapperTest $(CFLAGS)
-
-clientTest: client.cpp
-	g++  -DTEST client.cpp -o clientTest $(CCFLAGS)
-
-benchmark: client.cpp
-	g++ -DBENCHMARK -DTEST client.cpp -o benchmark $(CCFLAGS)
-
-test: mapperTest clientTest
-	./mapperTest
-	./clientTest
-
+	rm -rf build/
+	rm -f src/mapper.c.o
+	rm -f src/mapper.c.o
+	rm -f src/server.cpp.o
+	rm -f src/client.cpp.o
+	rm -f src/server.rs.o
+	rm -f src/mapper.c.o
+	rm -f src/client.cpp.o
+	rm -f src/client.cpp.o
+	rm -f src/mapper.c.o
+	rm -f src/jni_wrapper.c.o
+	rm -f src/MapperWrapper.java.o
+	rm -f src/Main.java.o

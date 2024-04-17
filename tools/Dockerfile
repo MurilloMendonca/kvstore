@@ -1,14 +1,10 @@
 # Use an Alpine base image
-FROM alpine:edge
-
-# Add the edge testing repository
-RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
+FROM alpine:latest
 
 RUN apk add --no-cache \
     build-base \
     gcc \
     g++ \
-    rust \
     make \
     linux-headers
 
@@ -18,9 +14,6 @@ WORKDIR /usr/src/KVStore
 # Copy the source code into the container
 COPY . .
 
-RUN make
-
-RUN make rust
-
 # Command to run the server
-CMD ["./server"]
+CMD ["./build/server"]
+
