@@ -1,4 +1,4 @@
---[[
+print([[
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡔⠋⠣⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡏⠀⠀⢠⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠑⢢⣶⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -28,13 +28,18 @@
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠀⠀⠀⠈⠉⠉⠛⠛⠒⠒⠛⠛⠉⠉⠁⠀⠀⠀⠀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡀⢼⡟⠁⠈⢻⠄⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣇⠀⠀⠀⠀⠀⠀⠀⠀⢰⡶⠶⢦⠀⠀⠀⠀⠀⠀⣸⠇⠀⠙⡇⠀⠀⠀⠀⣴⠞⠁⡀⠀⠹⠤⠴⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠲⢄⠀⠀⠀⠀⠀⠈⢳⠀⠰⣤⣀⣠⣀⡠⠞⠁⠀⠀⠀⠙⠲⢤⣀⡴⠋⠀⠸⣍⡷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⣤⠤⠖⠒⠲⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀]]
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⣤⠤⠖⠒⠲⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀]])
+local RELEASE_FLAGS = "-fPIC -O3"
+local DEBUG_FLAGS = "-fPIC -Wall -g -O0 -pedantic -Wextra -Werror -fsanitize=address -fsanitize=undefined -mshstk -DDEBUG"
+
+local CFLAGS = "-std=c99 "..RELEASE_FLAGS
+local CXXFLAGS = "-std=c++17 "..RELEASE_FLAGS
 return {
     name = "KVStore",
     version = "0.1.0",
     description = "A simple Key-Value store library and server",
     compiler = "cc",
-    flags = "-fPIC -O3",
+    flags = CFLAGS,
     generateCompileCommands = true,
     modules = {
         {
@@ -59,7 +64,7 @@ return {
             name = "C++ Server",
             version = "0.1.0",
             compiler = "g++",
-            flags = "-std=c++17 -g",
+            flags = CXXFLAGS,
             sources = {
                 "src/server.cpp",
             },
@@ -77,7 +82,7 @@ return {
             name = "C++ Client Lib",
             version = "0.1.0",
             compiler = "g++",
-            flags = "-std=c++17",
+            flags = CXXFLAGS,
             sources = {
                 "src/client.cpp",
             },
@@ -104,7 +109,7 @@ return {
         {
             name = "Mapper test",
             version = "0.1.0",
-            flags = "-DTEST",
+            flags = "-DTEST " .. CFLAGS,
             output = "build/mapperTest",
             sources = {
                 "src/mapper.c",
@@ -117,7 +122,7 @@ return {
             name = "C++ client test",
             version = "0.1.0",
             compiler = "g++",
-            flags = "-std=c++17 -DTEST",
+            flags = "-DTEST "..CXXFLAGS,
             output = "build/clientTest",
             sources = {
                 "src/client.cpp",
@@ -130,7 +135,7 @@ return {
             name = "C++ client benchmark",
             version = "0.1.0",
             compiler = "g++",
-            flags = "-std=c++17 -DTEST -DBENCHMARK",
+            flags = "-DTEST -DBENCHMARK "..CXXFLAGS,
             output = "build/benchmark",
             sources = {
                 "src/client.cpp",
@@ -142,7 +147,7 @@ return {
         {
             name = "C Wrapper",
             compiler = "gcc",
-            flags = "-fPIC -O3",
+            flags = CFLAGS,
             sources = {
                 "src/mapper.c",
                 "src/jni_wrapper.c",

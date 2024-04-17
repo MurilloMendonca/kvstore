@@ -1,10 +1,11 @@
 #include "mapper.h"
+#include "logger.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define MAX_KEY_SIZE 2048
-#define MAX_VALUE_SIZE 10<<20
+#define MAX_VALUE_SIZE 10 << 20
 #define HASH_MAP_SIZE 101
 #define NUMBER_OF_MAPS 100
 typedef char *value;
@@ -28,20 +29,20 @@ int hash(key key, int key_len) {
   for (int i = 0; i < key_len; i++) {
     hash += key[i];
   }
-  hash = hash<0? -hash: hash; 
+  hash = hash < 0 ? -hash : hash;
   return hash % HASH_MAP_SIZE;
 }
 
 int init_map() {
   if (maps_count >= NUMBER_OF_MAPS) {
-    printf("[C_MAPPER_ERROR]Maximum number of maps reached\n");
+    LOG_ERROR("Maximum number of maps reached");
     return -1;
   }
   maps[maps_count] = (hash_map_t)malloc(sizeof(entry *) * HASH_MAP_SIZE);
   for (int i = 0; i < HASH_MAP_SIZE; i++) {
     maps[maps_count][i] = NULL;
   }
-  printf("[C_MAPPER_INFO]Creating new map %d\n", maps_count);
+  LOG_INFO("Creating new map %d", maps_count);
   return maps_count++;
 }
 
@@ -49,7 +50,7 @@ int set_val(int map_id, const char *key, int key_len, const char *value,
             int value_len) {
   if (map_id < 0 || map_id >= maps_count || key_len > MAX_KEY_SIZE ||
       value_len > MAX_VALUE_SIZE) {
-    printf("[C_MAPPER_ERROR]Invalid map_id or key/value size\n");
+    LOG_ERROR("Invalid map_id or key/value size");
     return -1;
   }
   int hash_key = hash(key, key_len);
@@ -64,12 +65,10 @@ int set_val(int map_id, const char *key, int key_len, const char *value,
   new_entry->value = value_copy;
   new_entry->next = NULL;
 
-#ifdef DEBUG
-  printf("[C_MAPPER_INFO]Creating new entry on map %d\n", map_id);
-  printf("[C_MAPPER_INFO]\thash_key: %d\n", hash_key);
-  printf("[C_MAPPER_INFO]\tkey: -%*s-\n", key_len, key);
-  printf("[C_MAPPER_INFO]\tvalue: -%*s-\n", value_len, value);
-#endif
+  LOG_DEBUG("Creating new entry on map %d", map_id);
+  LOG_DEBUG("\thash_key: %d", hash_key);
+  LOG_DEBUG("\tkey: -%*s-", key_len, key);
+  LOG_DEBUG("\tvalue: -%*s-\n", value_len, value);
   entry *current = maps[map_id][hash_key];
   if (current == NULL) {
     maps[map_id][hash_key] = new_entry;
@@ -92,18 +91,16 @@ int set_val(int map_id, const char *key, int key_len, const char *value,
 
 int get_val(int map_id, const char *key, int key_len, char *value) {
   if (map_id < 0 || map_id >= maps_count) {
-    printf("[C_MAPPER_ERROR]map_id out of range\n");
-    printf("[C_MAPPER_ERROR]\tmap_id: %d\n", map_id);
-    printf("[C_MAPPER_ERROR]\tmaps_count: %d\n", maps_count);
+    LOG_ERROR("map_id out of range\n");
+    LOG_ERROR("\tmap_id: %d\n", map_id);
+    LOG_ERROR("\tmaps_count: %d\n", maps_count);
     return -1;
   }
   int hash_key = hash(key, key_len);
 
-#ifdef DEBUG
-  printf("[C_MAPPER_INFO]Getting value on map %d\n", map_id);
-  printf("[C_MAPPER_INFO]\thash_key: %d\n", hash_key);
-  printf("[C_MAPPER_INFO]\tkey: -%*s-\n", key_len, key);
-#endif
+  LOG_DEBUG("Getting value on map %d\n", map_id);
+  LOG_DEBUG("\thash_key: %d\n", hash_key);
+  LOG_DEBUG("\tkey: -%*s-\n", key_len, key);
   entry *current = maps[map_id][hash_key];
   while (current != NULL) {
     if (key_len == current->key_len &&
@@ -118,10 +115,10 @@ int get_val(int map_id, const char *key, int key_len, char *value) {
 
 void destroy_map(int map_id) {
   if (map_id < 0 || map_id >= maps_count) {
-      printf("[C_MAPPER_ERROR]map_id out of range: %d\n", map_id);
+    LOG_ERROR("map_id out of range: %d\n", map_id);
     return;
   }
-  printf("[C_MAPPER_INFO]Destroying map %d\n", map_id);
+  LOG_INFO("Destroying map %d\n", map_id);
   for (int i = 0; i < HASH_MAP_SIZE; i++) {
     entry *current = maps[map_id][i];
     while (current != NULL) {

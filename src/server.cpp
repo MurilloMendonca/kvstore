@@ -1,4 +1,5 @@
 #include "mapper.h"
+#include "logger.h"
 #include <arpa/inet.h>
 #include <functional>
 #include <netinet/in.h>
@@ -196,9 +197,7 @@ RequestOrError parseRequest(int socket) {
 Response processTask(RequestOrError task, int map_id) {
   if (std::holds_alternative<GetRequest>(task)) {
     auto getRequest = std::get<GetRequest>(task);
-#ifdef DEBUG
-    printf("[SERVER_INFO]Get request: %s\n", getRequest.key.c_str());
-#endif
+    LOG_DEBUG("Get request: %s\n", getRequest.key.c_str());
     char buffer[2 << 20] = {0};
     int len =
         get_val(map_id, getRequest.key.c_str(), getRequest.key.size(), buffer);
@@ -206,19 +205,15 @@ Response processTask(RequestOrError task, int map_id) {
       return Error("Failed");
     }
     auto resp = std::string(buffer, len);
-#ifdef DEBUG
-    printf("[SERVER_INFO]Get response: %*s\n", (int)resp.size(), resp.c_str());
-#endif
+    LOG_DEBUG("Get response: %*s\n", (int)resp.size(), resp.c_str());
     return resp;
   } else if (std::holds_alternative<SetRequest>(task)) {
     auto setRequest = std::get<SetRequest>(task);
-#ifdef DEBUG
-    printf("[SERVER_INFO]Set request: \n\tKey=%s "
+    LOG_DEBUG("Set request: \n\tKey=%s "
            "\n\tVal=-%*s-\n\tKey_len=%zu\n\tVal_len=%zu\n",
            setRequest.key.c_str(), (int)setRequest.value.size(),
            setRequest.value.c_str(), setRequest.key.size(),
            setRequest.value.size());
-#endif
     int resp = set_val(map_id, setRequest.key.c_str(), setRequest.key.size(),
                        setRequest.value.c_str(), setRequest.value.size());
     return resp == -1 ? "Failed" : "OK";
@@ -258,7 +253,7 @@ int receiveHandshake(int socket) {
     return -1;
   }
   if (request[2] == 'n') {
-    printf("[SERVER_INFO]New map created\n");
+    LOG_INFO("New map created\n");
     map_id = init_map();
   } else {
     map_id = std::stoi(request.substr(2));
@@ -274,13 +269,13 @@ int receiveHandshake(int socket) {
 }
 void handleClient(int socket) {
   int map_id = receiveHandshake(socket);
-  printf("[SERVER_INFO]\tMap id: %d\n", map_id);
+  LOG_INFO("\tMap id: %d\n", map_id);
   while (map_id != -1) {
 
     auto task = parseRequest(socket);
 
     if (std::holds_alternative<Error>(task)) {
-      printf("[SERVER_ERROR]%s\n", std::get<Error>(task).c_str());
+      LOG_ERROR("%s\n", std::get<Error>(task).c_str());
       sendResult(socket, std::get<Error>(task).c_str());
       break;
     }
@@ -290,11 +285,11 @@ void handleClient(int socket) {
     bool status = sendResult(socket, resp);
 
     if (!status) {
-      printf("[SERVER_ERROR]Failed to send result\n");
+      LOG_ERROR("Failed to send result\n");
       break;
     }
   }
-  printf("[SERVER_INFO]Client disconnected\n");
+  LOG_INFO("Client disconnected\n");
   close(socket);
 }
 
@@ -307,7 +302,7 @@ int main(int argc, char const *argv[]) {
 
   int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
   if (serverSocket < 0) {
-    printf("[SERVER_INFO]Error opening socket");
+    LOG_INFO("Error opening socket");
     return 1;
   }
   struct sockaddr_in serverAddress;
@@ -316,12 +311,12 @@ int main(int argc, char const *argv[]) {
   serverAddress.sin_port = htons(port);
   if (bind(serverSocket, (struct sockaddr *)&serverAddress,
            sizeof(serverAddress)) < 0) {
-    printf("[SERVER_ERROR]Error binding socket");
+    LOG_ERROR("Error binding socket");
     return 1;
   }
 
-  printf("[SERVER_INFO]Server started\n");
-  printf("[SERVER_INFO]Listening on port %d\n", port);
+  LOG_INFO("Server started\n");
+  LOG_INFO("Listening on port %d\n", port);
 
   struct sockaddr_in clientAddress;
   socklen_t clientAddressLength = sizeof(clientAddress);
@@ -330,10 +325,10 @@ int main(int argc, char const *argv[]) {
     int clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddress,
                               &clientAddressLength);
     if (clientSocket < 0) {
-      printf("[SERVER_ERROR]Error accepting client");
+      LOG_ERROR("Error accepting client");
       return 1;
     }
-    printf("[SERVER_INFO]New client connected\n");
+    LOG_INFO("New client connected\n");
     std::thread(handleClient, clientSocket).detach();
   }
 }
